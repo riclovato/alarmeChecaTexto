@@ -6,13 +6,15 @@ import pytesseract
 import tkinter as tk
 import sys
 import traceback
+import pygetwindow as gw
 
+program_window_title = "BlueStacks App Player 7"
 
 # Define the coordinates for the top-left and bottom-right corners
-top_left_x = 1600
-top_left_y = 100
-bottom_right_x = 1870
-bottom_right_y = 200
+top_left_x = 1566
+top_left_y = 58
+bottom_right_x = 1795
+bottom_right_y = 108
 
 # Variável global para controlar o estado do programa
 paused = False
@@ -37,7 +39,6 @@ def log_exception(ex):
         log_file.write(f"Timestamp: {timestamp}\n")
         traceback.print_exc(file=log_file)
         log_file.write("\n\n")
-
 
 def toggle_pause():
     global paused, countdown, program_status
@@ -75,8 +76,17 @@ def stop():
 
 def main_logic():
     pygame.init()
-    alarme = pygame.mixer.Sound("C:/temp/Python/projetoAlarme/alarme/alarmSound.mp3")
+    alarme = pygame.mixer.Sound("C:/temp/Python/alarmeMir/alarmSound.mp3")
     alarm_count = 0
+
+    # Encontre a janela do programa pelo título
+    program_window = gw.getWindowsWithTitle(program_window_title)
+    if not program_window:
+        print(f"Janela '{program_window_title}' não encontrada.")
+        return
+
+    program_window = program_window[0]  # Supondo que haja apenas uma janela com o mesmo título
+
     while not stop_program:
         try:
             if not paused:
@@ -91,12 +101,24 @@ def main_logic():
 
                 # Check if the target text is present in the extracted text
                 if target_text.lower() not in extracted_text.lower():
+                    time.sleep(0.5)
+                    screenshot = ImageGrab.grab(bbox=(top_left_x, top_left_y, bottom_right_x, bottom_right_y))
+                    screenshot.save("screenshot.png")  # Salvar a captura de tela para depuração
+
+                   # Perform OCR to extract text from the screenshot
+                    extracted_text = pytesseract.image_to_string(screenshot)
+                    print(extracted_text)
                     alarm_count += 1
                     time.sleep(1)
-                    if alarm_count == 3:
+                    with open("log.txt", "a") as log_file:
+                        log_file.write(f"Extracted Text: {extracted_text}\n")
+                        log_file.write(f"Alarm Count: {alarm_count}\n")
+                    if alarm_count >= 3:
                         alarme.play()
                         time.sleep(20)  # Wait for 18 seconds
                         alarme.stop()
+                    if alarm_count >= 30:
+                        alarm_count = 0
                 else:
                     alarm_count = 0
                 print(alarm_count)
